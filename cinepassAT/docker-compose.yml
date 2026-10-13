@@ -1,0 +1,153 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.7.1
+    container_name: cinepass-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.1
+    container_name: cinepass-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: >
+        INTERNAL:PLAINTEXT,
+        EXTERNAL:PLAINTEXT
+
+      KAFKA_LISTENERS: >
+        INTERNAL://0.0.0.0:29092,
+        EXTERNAL://0.0.0.0:9092
+
+      KAFKA_ADVERTISED_LISTENERS: >
+        INTERNAL://kafka:29092,
+        EXTERNAL://localhost:9092
+
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: cinepass-kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: cinepass
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+  postgres:
+    image: postgres:17-alpine
+    container_name: cinepass-postgres
+    environment:
+      POSTGRES_USER: cinepass
+      POSTGRES_PASSWORD: cinepass
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cinepass -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  discovery-server:
+    build: ./discovery-server
+    container_name: cinepass-discovery
+    ports:
+      - "8761:8761"
+    environment:
+      SERVER_PORT: 8761
+
+  pagamento-service:
+    build: ./pagamento-service
+    container_name: cinepass-pagamento
+    ports:
+      - "8082:8082"
+    environment:
+      SERVER_PORT: 8082
+      DB_URL: jdbc:postgresql://postgres:5432/pagamento_db
+      DB_USERNAME: cinepass
+      DB_PASSWORD: cinepass
+      EUREKA_URL: http://discovery-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+
+  ingresso-service:
+    build: ./ingresso-service
+    container_name: cinepass-ingresso
+    ports:
+      - "8083:8083"
+    environment:
+      SERVER_PORT: 8083
+      DB_URL: jdbc:postgresql://postgres:5432/ingresso_db
+      DB_USERNAME: cinepass
+      DB_PASSWORD: cinepass
+      EUREKA_URL: http://discovery-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+
+  reserva-service:
+    build: ./reserva-service
+    container_name: cinepass-reserva
+    ports:
+      - "8081:8081"
+    environment:
+      SERVER_PORT: 8081
+      DB_URL: jdbc:postgresql://postgres:5432/cinepass_db
+      DB_USERNAME: cinepass
+      DB_PASSWORD: cinepass
+      EUREKA_URL: http://discovery-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+      pagamento-service:
+        condition: service_started
+      ingresso-service:
+        condition: service_started
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: cinepass-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SERVER_PORT: 8080
+      EUREKA_URL: http://discovery-server:8761/eureka/
+    depends_on:
+      discovery-server:
+        condition: service_started
+      reserva-service:
+        condition: service_started
+      pagamento-service:
+        condition: service_started
+      ingresso-service:
+        condition: service_started
+
+volumes:
+  postgres-data:
