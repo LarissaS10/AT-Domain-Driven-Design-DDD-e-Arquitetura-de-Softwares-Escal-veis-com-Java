@@ -1,6 +1,11 @@
 package br.com.cinepass.reserva.domain.model;
 
+import br.com.cinepass.reserva.domain.event.ReservaEvento;
+import br.com.cinepass.reserva.domain.event.TipoEventoReserva;
+
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -15,6 +20,7 @@ public class Reserva {
     private UUID pagamentoId;
     private UUID ingressoId;
     private final Instant criadaEm;
+    private final List<ReservaEvento> eventos = new ArrayList<>();
 
     private Reserva(ReservaId id, ClienteId clienteId, SessaoId sessaoId, List<AssentoId> assentos, Dinheiro valorTotal,
                     StatusReserva status, UUID pagamentoId, UUID ingressoId, Instant criadaEm) {
@@ -25,7 +31,9 @@ public class Reserva {
     }
 
     public static Reserva criar(ClienteId clienteId, SessaoId sessaoId, List<AssentoId> assentos, Dinheiro valorTotal) {
-        return new Reserva(ReservaId.novo(), clienteId, sessaoId, assentos, valorTotal, StatusReserva.CRIADA, null, null, Instant.now());
+        Reserva reserva = new Reserva(ReservaId.novo(), clienteId, sessaoId, assentos, valorTotal, StatusReserva.CRIADA, null, null, Instant.now());
+        reserva.registrar(TipoEventoReserva.RESERVA_CRIADA);
+        return reserva;
     }
 
     public static Reserva restaurar(ReservaId id, ClienteId clienteId, SessaoId sessaoId, List<AssentoId> assentos, Dinheiro valorTotal,
@@ -36,12 +44,29 @@ public class Reserva {
     public void aguardarPagamento() { exigir(StatusReserva.CRIADA); status = StatusReserva.AGUARDANDO_PAGAMENTO; }
     public void confirmarPagamento(UUID pagamentoId) {
         exigir(StatusReserva.AGUARDANDO_PAGAMENTO); this.pagamentoId = Objects.requireNonNull(pagamentoId); status = StatusReserva.PAGAMENTO_APROVADO;
+        registrar(TipoEventoReserva.PAGAMENTO_DA_RESERVA_CONFIRMADO);
     }
-    public void iniciarEmissaoIngresso() { exigir(StatusReserva.PAGAMENTO_APROVADO); status = StatusReserva.EMITINDO_INGRESSO; }
+    public void iniciarEmissaoIngresso() {
+        exigir(StatusReserva.PAGAMENTO_APROVADO); status = StatusReserva.EMITINDO_INGRESSO;
+        registrar(TipoEventoReserva.EMISSAO_DE_INGRESSO_INICIADA);
+    }
     public void confirmar(UUID ingressoId) {
         exigir(StatusReserva.EMITINDO_INGRESSO); this.ingressoId = Objects.requireNonNull(ingressoId); status = StatusReserva.CONFIRMADA;
+        registrar(TipoEventoReserva.RESERVA_CONFIRMADA);
     }
-    public void cancelar() { if (status != StatusReserva.CANCELADA) status = StatusReserva.CANCELADA; }
+    public void cancelar() {
+        if (status == StatusReserva.CANCELADA) return;
+        status = StatusReserva.CANCELADA;
+        registrar(TipoEventoReserva.RESERVA_CANCELADA);
+    }
+
+    public List<ReservaEvento> eventosPendentes() { return Collections.unmodifiableList(new ArrayList<>(eventos)); }
+    public void limparEventos() { eventos.clear(); }
+
+    private void registrar(TipoEventoReserva tipo) {
+        eventos.add(new ReservaEvento(java.util.UUID.randomUUID(), tipo, Instant.now(), id.valor(), clienteId.valor(), sessaoId.valor(),
+                assentos.stream().map(AssentoId::valor).toList(), valorTotal.valor(), status.name(), pagamentoId, ingressoId));
+    }
     private void exigir(StatusReserva esperado) { if (status != esperado) throw new IllegalStateException("Estado inválido. Esperado: " + esperado + ", atual: " + status); }
 
     public ReservaId getId(){return id;} public ClienteId getClienteId(){return clienteId;} public SessaoId getSessaoId(){return sessaoId;}

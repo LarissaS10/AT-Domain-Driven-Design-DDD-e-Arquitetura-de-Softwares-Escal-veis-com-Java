@@ -1,0 +1,37 @@
+server:
+  port: ${SERVER_PORT:8084}
+
+spring:
+  application:
+    name: notificacao-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:25432/notificacao_db}
+    username: ${DB_USERNAME:cinepass}
+    password: ${DB_PASSWORD:cinepass}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    listener:
+      concurrency: 3
+      ack-mode: record
+      observation-enabled: true
+    consumer:
+      group-id: notificacao-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+
+logging:
+  file:
+    name: logs/notificacao-service.log
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %5p [${spring.application.name}] [%t] [correlationId=%X{correlationId:-}] [reservaId=%X{reservaId:-}] [eventId=%X{eventId:-}] %logger{30} : %m%n"
+    file: "${logging.pattern.console}"

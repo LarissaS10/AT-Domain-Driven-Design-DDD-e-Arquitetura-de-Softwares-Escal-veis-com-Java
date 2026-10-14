@@ -1,0 +1,104 @@
+### 1. Caminho feliz (reserva confirmada)
+POST http://localhost:8081/api/reservas/temporal
+Content-Type: application/json
+
+{
+  "clienteId": "33333333-3333-3333-3333-333333333333",
+  "sessaoId": "22222222-2222-2222-2222-222222222222",
+  "assentos": ["B2"],
+  "simularRecusaPagamento": false,
+  "simularFalhaIngresso": false
+}
+
+### 2. Falha no ingresso (compensação: reserva cancelada)
+POST http://localhost:8081/api/reservas/temporal
+Content-Type: application/json
+
+{
+  "clienteId": "33333333-3333-3333-3333-333333333333",
+  "sessaoId": "22222222-2222-2222-2222-222222222222",
+  "assentos": ["B2"],
+  "simularRecusaPagamento": false,
+  "simularFalhaIngresso": true
+}
+
+### 3. Auditoria
+GET http://localhost:8086/api/auditoria
+
+### 4. Notificações
+GET http://localhost:8084/api/notificacoes
+
+### 5. Reputação
+GET http://localhost:8085/api/reputacao
+
+### Ex4 - reserva 1 (cliente 1, A2)
+POST http://localhost:8081/api/reservas/temporal
+Content-Type: application/json
+
+{
+  "clienteId": "33333333-3333-3333-3333-333333333333",
+  "sessaoId": "22222222-2222-2222-2222-222222222222",
+  "assentos": ["A2"],
+  "simularRecusaPagamento": false,
+  "simularFalhaIngresso": false
+}
+
+### Ex4 - reserva 2 (cliente 2, A4)
+POST http://localhost:8081/api/reservas/temporal
+Content-Type: application/json
+
+{
+  "clienteId": "44444444-4444-4444-4444-444444444444",
+  "sessaoId": "22222222-2222-2222-2222-222222222222",
+  "assentos": ["A4"],
+  "simularRecusaPagamento": false,
+  "simularFalhaIngresso": false
+}
+
+### Ex4 - reserva 3 (cliente 1, A5)
+POST http://localhost:8081/api/reservas/temporal
+Content-Type: application/json
+
+{
+  "clienteId": "33333333-3333-3333-3333-333333333333",
+  "sessaoId": "22222222-2222-2222-2222-222222222222",
+  "assentos": ["A5"],
+  "simularRecusaPagamento": false,
+  "simularFalhaIngresso": false
+}
+
+### Ex4 - reserva 4 (cliente 2, B3)
+POST http://localhost:8081/api/reservas/temporal
+Content-Type: application/json
+
+{
+  "clienteId": "44444444-4444-4444-4444-444444444444",
+  "sessaoId": "22222222-2222-2222-2222-222222222222",
+  "assentos": ["B3"],
+  "simularRecusaPagamento": false,
+  "simularFalhaIngresso": false
+}
+
+### Ex4 - reserva 5 (cliente 1, B4)
+POST http://localhost:8081/api/reservas/temporal
+Content-Type: application/json
+
+{
+  "clienteId": "33333333-3333-3333-3333-333333333333",
+  "sessaoId": "22222222-2222-2222-2222-222222222222",
+  "assentos": ["B4"],
+  "simularRecusaPagamento": false,
+  "simularFalhaIngresso": false
+}
+
+### Ex4 - reserva 6 (cliente 2, B5)
+POST http://localhost:8081/api/reservas/temporal
+Content-Type: application/json
+
+{
+  "clienteId": "44444444-4444-4444-4444-444444444444",
+  "sessaoId": "22222222-2222-2222-2222-222222222222",
+  "assentos": ["B5"],
+  "simularRecusaPagamento": false,
+  "simularFalhaIngresso": false
+}

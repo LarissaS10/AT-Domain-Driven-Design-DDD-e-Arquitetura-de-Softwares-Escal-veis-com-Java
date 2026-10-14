@@ -15,5 +15,8 @@
         <module>reserva-service</module>
         <module>pagamento-service</module>
         <module>ingresso-service</module>
+        <module>auditoria-service</module>
+        <module>notificacao-service</module>
+        <module>reputacao-service</module>
     </modules>
 </project>

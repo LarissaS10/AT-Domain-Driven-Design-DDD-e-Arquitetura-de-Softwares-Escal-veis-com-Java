@@ -1,0 +1,25 @@
+server:
+  http_listen_port: 9080
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: cinepass
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: cinepass
+          __path__: /logs/*.log
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<ts>\S+)\s+\S+\s+\[(?P<servico>[^\]]+)\]'
+      - labels:
+          servico:
+      - timestamp:
+          source: ts
+          format: RFC3339Nano
